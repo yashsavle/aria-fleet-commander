@@ -1,0 +1,40 @@
+# Environment files — never commit API keys
+.env
+.env.local
+.env.*
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.Python
+venv/
+env/
+*.egg-info/
+
+# ROS2 build artifacts
+aria-ros2/build/
+aria-ros2/install/
+aria-ros2/log/
+
+# macOS
+.DS_Store
+.AppleDouble
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
+logs/
+
+# GCP credentials
+*.json
+service-account*.json
