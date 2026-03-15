@@ -1,0 +1,239 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <model name="aria_agv">
+    <static>false</static>
+
+    <link name="base_footprint"/>
+
+    <link name="base_link">
+      <pose>0 0 0.08 0 0 0</pose>
+      <inertial>
+        <mass>80.0</mass>
+        <inertia>
+          <ixx>1.5</ixx><iyy>2.0</iyy><izz>2.5</izz>
+          <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+        </inertia>
+      </inertial>
+
+      <!-- Main chassis - dark gunmetal -->
+      <collision name="chassis_col">
+        <geometry><box><size>0.8 0.5 0.14</size></box></geometry>
+      </collision>
+      <visual name="chassis">
+        <geometry><box><size>0.8 0.5 0.14</size></box></geometry>
+        <material>
+          <ambient>0.12 0.12 0.14 1</ambient>
+          <diffuse>0.15 0.15 0.18 1</diffuse>
+          <specular>0.4 0.4 0.4 1</specular>
+        </material>
+      </visual>
+
+      <!-- Top deck - brushed aluminum -->
+      <visual name="top_deck">
+        <pose>0 0 0.075 0 0 0</pose>
+        <geometry><box><size>0.75 0.45 0.01</size></box></geometry>
+        <material>
+          <ambient>0.55 0.55 0.6 1</ambient>
+          <diffuse>0.65 0.65 0.7 1</diffuse>
+          <specular>0.8 0.8 0.8 1</specular>
+        </material>
+      </visual>
+
+      <!-- Orange safety stripe front -->
+      <visual name="stripe_front">
+        <pose>0.38 0 0.02 0 0 0</pose>
+        <geometry><box><size>0.04 0.5 0.1</size></box></geometry>
+        <material>
+          <ambient>0.9 0.4 0.0 1</ambient>
+          <diffuse>1.0 0.45 0.0 1</diffuse>
+          <emissive>0.3 0.1 0.0 1</emissive>
+        </material>
+      </visual>
+
+      <!-- Orange safety stripe rear -->
+      <visual name="stripe_rear">
+        <pose>-0.38 0 0.02 0 0 0</pose>
+        <geometry><box><size>0.04 0.5 0.1</size></box></geometry>
+        <material>
+          <ambient>0.9 0.4 0.0 1</ambient>
+          <diffuse>1.0 0.45 0.0 1</diffuse>
+          <emissive>0.3 0.1 0.0 1</emissive>
+        </material>
+      </visual>
+
+      <!-- Blue company stripe -->
+      <visual name="stripe_side_left">
+        <pose>0 0.24 0.02 0 0 0</pose>
+        <geometry><box><size>0.7 0.03 0.08</size></box></geometry>
+        <material>
+          <ambient>0.0 0.3 0.8 1</ambient>
+          <diffuse>0.0 0.35 0.9 1</diffuse>
+          <emissive>0.0 0.05 0.2 1</emissive>
+        </material>
+      </visual>
+      <visual name="stripe_side_right">
+        <pose>0 -0.24 0.02 0 0 0</pose>
+        <geometry><box><size>0.7 0.03 0.08</size></box></geometry>
+        <material>
+          <ambient>0.0 0.3 0.8 1</ambient>
+          <diffuse>0.0 0.35 0.9 1</diffuse>
+          <emissive>0.0 0.05 0.2 1</emissive>
+        </material>
+      </visual>
+
+      <!-- Safety beacon light -->
+      <visual name="beacon">
+        <pose>0.25 0 0.1 0 0 0</pose>
+        <geometry><cylinder><radius>0.035</radius><length>0.07</length></cylinder></geometry>
+        <material>
+          <ambient>1.0 0.6 0.0 1</ambient>
+          <diffuse>1.0 0.7 0.0 1</diffuse>
+          <emissive>0.8 0.4 0.0 1</emissive>
+        </material>
+      </visual>
+
+      <!-- ARIA logo plate -->
+      <visual name="logo_plate">
+        <pose>0 0 0.082 0 0 0</pose>
+        <geometry><box><size>0.2 0.12 0.002</size></box></geometry>
+        <material>
+          <ambient>0.0 0.5 0.9 1</ambient>
+          <diffuse>0.0 0.6 1.0 1</diffuse>
+          <emissive>0.0 0.2 0.4 1</emissive>
+        </material>
+      </visual>
+
+      <!-- Bumper front -->
+      <visual name="bumper_front">
+        <pose>0.41 0 -0.02 0 0 0</pose>
+        <geometry><box><size>0.02 0.52 0.06</size></box></geometry>
+        <material>
+          <ambient>0.08 0.08 0.08 1</ambient>
+          <diffuse>0.1 0.1 0.1 1</diffuse>
+        </material>
+      </visual>
+
+      <!-- Bumper rear -->
+      <visual name="bumper_rear">
+        <pose>-0.41 0 -0.02 0 0 0</pose>
+        <geometry><box><size>0.02 0.52 0.06</size></box></geometry>
+        <material>
+          <ambient>0.08 0.08 0.08 1</ambient>
+          <diffuse>0.1 0.1 0.1 1</diffuse>
+        </material>
+      </visual>
+    </link>
+
+    <joint name="base_joint" type="fixed">
+      <parent>base_footprint</parent>
+      <child>base_link</child>
+    </joint>
+
+    <!-- Left drive wheel - rubber black -->
+    <link name="wheel_left">
+      <pose>0.0 0.26 0.04 -1.5708 0 0</pose>
+      <inertial><mass>2.0</mass>
+        <inertia><ixx>0.02</ixx><iyy>0.02</iyy><izz>0.02</izz></inertia>
+      </inertial>
+      <collision name="col">
+        <geometry><cylinder><radius>0.055</radius><length>0.055</length></cylinder></geometry>
+        <surface><friction><ode><mu>100</mu><mu2>50</mu2></ode></friction></surface>
+      </collision>
+      <visual name="tire">
+        <geometry><cylinder><radius>0.055</radius><length>0.055</length></cylinder></geometry>
+        <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.08 0.08 0.08 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular></material>
+      </visual>
+      <visual name="hub">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry><cylinder><radius>0.025</radius><length>0.056</length></cylinder></geometry>
+        <material><ambient>0.5 0.5 0.55 1</ambient><diffuse>0.6 0.6 0.65 1</diffuse></material>
+      </visual>
+    </link>
+    <joint name="wheel_left_joint" type="revolute">
+      <parent>base_link</parent><child>wheel_left</child>
+      <axis><xyz>0 0 1</xyz><limit><effort>200</effort></limit></axis>
+    </joint>
+
+    <!-- Right drive wheel -->
+    <link name="wheel_right">
+      <pose>0.0 -0.26 0.04 -1.5708 0 0</pose>
+      <inertial><mass>2.0</mass>
+        <inertia><ixx>0.02</ixx><iyy>0.02</iyy><izz>0.02</izz></inertia>
+      </inertial>
+      <collision name="col">
+        <geometry><cylinder><radius>0.055</radius><length>0.055</length></cylinder></geometry>
+        <surface><friction><ode><mu>100</mu><mu2>50</mu2></ode></friction></surface>
+      </collision>
+      <visual name="tire">
+        <geometry><cylinder><radius>0.055</radius><length>0.055</length></cylinder></geometry>
+        <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.08 0.08 0.08 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular></material>
+      </visual>
+      <visual name="hub">
+        <geometry><cylinder><radius>0.025</radius><length>0.056</length></cylinder></geometry>
+        <material><ambient>0.5 0.5 0.55 1</ambient><diffuse>0.6 0.6 0.65 1</diffuse></material>
+      </visual>
+    </link>
+    <joint name="wheel_right_joint" type="revolute">
+      <parent>base_link</parent><child>wheel_right</child>
+      <axis><xyz>0 0 1</xyz><limit><effort>200</effort></limit></axis>
+    </joint>
+
+    <!-- Front caster -->
+    <link name="caster_front">
+      <pose>0.32 0 0.018 0 0 0</pose>
+      <inertial><mass>0.5</mass>
+        <inertia><ixx>0.001</ixx><iyy>0.001</iyy><izz>0.001</izz></inertia>
+      </inertial>
+      <collision name="col">
+        <geometry><sphere><radius>0.022</radius></sphere></geometry>
+        <surface><friction><ode><mu>0.01</mu><mu2>0.01</mu2></ode></friction></surface>
+      </collision>
+      <visual name="v">
+        <geometry><sphere><radius>0.022</radius></sphere></geometry>
+        <material><ambient>0.3 0.3 0.3 1</ambient></material>
+      </visual>
+    </link>
+    <joint name="caster_front_joint" type="fixed">
+      <parent>base_link</parent><child>caster_front</child>
+    </joint>
+
+    <!-- Rear caster -->
+    <link name="caster_rear">
+      <pose>-0.32 0 0.018 0 0 0</pose>
+      <inertial><mass>0.5</mass>
+        <inertia><ixx>0.001</ixx><iyy>0.001</iyy><izz>0.001</izz></inertia>
+      </inertial>
+      <collision name="col">
+        <geometry><sphere><radius>0.022</radius></sphere></geometry>
+        <surface><friction><ode><mu>0.01</mu><mu2>0.01</mu2></ode></friction></surface>
+      </collision>
+      <visual name="v">
+        <geometry><sphere><radius>0.022</radius></sphere></geometry>
+        <material><ambient>0.3 0.3 0.3 1</ambient></material>
+      </visual>
+    </link>
+    <joint name="caster_rear_joint" type="fixed">
+      <parent>base_link</parent><child>caster_rear</child>
+    </joint>
+
+    <!-- Diff drive plugin -->
+    <plugin name="diff_drive" filename="libgazebo_ros_diff_drive.so">
+      <ros><namespace>ROBOT_NS</namespace><remapping>odom:=odom</remapping></ros>
+      <node_name>diff_drive</node_name>
+      <left_joint>wheel_left_joint</left_joint>
+      <right_joint>wheel_right_joint</right_joint>
+      <wheel_separation>0.52</wheel_separation>
+      <wheel_diameter>0.11</wheel_diameter>
+      <max_wheel_torque>100</max_wheel_torque>
+      <max_wheel_acceleration>2.0</max_wheel_acceleration>
+      <publish_odom>true</publish_odom>
+      <publish_odom_tf>true</publish_odom_tf>
+      <publish_wheel_tf>false</publish_wheel_tf>
+      <odometry_frame>odom</odometry_frame>
+      <robot_base_frame>base_footprint</robot_base_frame>
+    </plugin>
+
+  </model>
+</sdf>

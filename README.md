@@ -2,6 +2,14 @@
 
 **Autonomous Robotics Intelligence & Administration**
 
+![ROS2](https://img.shields.io/badge/ROS2-Humble-22314E?style=flat-square&logo=ros&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.10-3776AB?style=flat-square&logo=python&logoColor=white)
+![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.100-009688?style=flat-square&logo=fastapi&logoColor=white)
+![GCP](https://img.shields.io/badge/GCP-e2--standard--4-4285F4?style=flat-square&logo=googlecloud&logoColor=white)
+![Gazebo](https://img.shields.io/badge/Gazebo-Classic%2011-FF6600?style=flat-square)
+![Claude](https://img.shields.io/badge/Claude-Sonnet%204-000000?style=flat-square)
+
 A warehouse AGV fleet management system I built to explore how ROS2, simulation, and LLMs can work together in an industrial robotics context. The system runs 6 custom AGV robots in a Gazebo simulation and streams live telemetry to a React dashboard via WebSocket. An AI agent powered by Claude handles fault diagnosis and fleet optimization queries.
 
 ---
@@ -78,16 +86,19 @@ GCP VM (Ubuntu 22.04, e2-standard-4)
 
 ## Tech stack
 
-| Component | Technology |
-|---|---|
-| Robot simulation | Gazebo Classic 11 |
-| Robot middleware | ROS2 Humble (Python) |
-| WebSocket bridge | rosbridge_server |
-| Backend API | FastAPI + Python 3.10 |
-| AI agent | Anthropic Claude (claude-sonnet-4) |
-| Frontend | React 18 + Vite |
-| Cloud | GCP — Ubuntu 22.04, e2-standard-4 |
-| VNC | Xvfb + x11vnc |
+| Layer | Technology | Purpose |
+|---|---|---|
+| Robot simulation | Gazebo Classic 11 | Physics simulation, sensor emulation |
+| Robot middleware | ROS2 Humble (Python) | Robot communication, navigation |
+| WebSocket bridge | rosbridge_server | Streams ROS2 topics to browser |
+| Backend API | FastAPI + Python 3.10 | Mission dispatch, AI proxy |
+| AI agent | Anthropic Claude (claude-sonnet-4) | Fault diagnosis, optimization |
+| Frontend | React 18 + Vite | Real-time dashboard |
+| Styling | Inline CSS + SVG | Custom warehouse map |
+| Cloud | GCP e2-standard-4 (Ubuntu 22.04) | VM hosting the simulation |
+| Remote display | Xvfb + x11vnc | Headless Gazebo GUI over VNC |
+| AGV model | Custom SDF (diff drive) | Flat warehouse AGV, no sensors |
+| Manipulators | UR10 URDF (static) | Pick station visualization |
 
 ---
 
