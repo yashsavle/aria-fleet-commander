@@ -1,435 +1,256 @@
-# 🤖 Robotics ML Pipeline
+# ARIA Fleet Commander
 
-> An end-to-end machine learning pipeline for real-time robot position classification using simulated ROS 2 sensor data, PyTorch, and MLflow.
+**Autonomous Robotics Intelligence & Administration**
 
----
-
-## 📋 Table of Contents
-
-- [Overview](#overview)
-- [System Architecture](#system-architecture)
-- [Data Pipeline](#data-pipeline)
-- [ML Model](#ml-model)
-- [ROS 2 Node Graph](#ros-2-node-graph)
-- [Project Structure](#project-structure)
-- [Quick Start](#quick-start)
-- [Step-by-Step Usage](#step-by-step-usage)
-- [Results](#results)
-- [Tech Stack](#tech-stack)
+A warehouse AGV fleet management system I built to explore how ROS2, simulation, and LLMs can work together in an industrial robotics context. The system runs 6 custom AGV robots in a Gazebo simulation and streams live telemetry to a React dashboard via WebSocket. An AI agent powered by Claude handles fault diagnosis and fleet optimization queries.
 
 ---
 
-## Overview
+## Demo
 
-This project demonstrates a **complete robotics ML pipeline**: from simulated sensors generating raw data, through dataset creation and CNN training, to live real-time inference running inside a ROS 2 node — all tracked with MLflow and visualized via Streamlit dashboards.
+![ARIA Dashboard](docs/screenshots/dashboard.png)
 
-The task: classify the **horizontal position** (Left / Center / Right) of a red box in a simulated camera feed using a lightweight CNN trained on rosbag recordings.
+*Fleet map showing active AGVs with fault alerts, real-time battery monitoring, and robot inspector panel.*
 
-### What it looks like
+![ARIA AI Agent](docs/screenshots/aria_ai.png)
 
-The simulated camera generates synthetic RGB scenes with three geometric objects (red box, green circle, blue triangle) that cycle through Left → Center → Right positions at 10Hz:
+*Claude-powered AI agent identifying active faults and providing step-by-step repair procedures.*
 
-| Left | Center | Right |
-|------|--------|-------|
-| Red box in left third | Red box in center third | Red box in right third |
+![Gazebo Warehouse](docs/screenshots/gazebo_warehouse.png)
 
-The CNN learns to classify which third of the frame the **red box** occupies, achieving **100% validation accuracy** on this task.
+*Custom warehouse world in Gazebo Classic 11 — 3 pick zones with UR10 manipulators, conveyor belt, and AGV staging area.*
+
+![AGV Staging](docs/screenshots/gazebo_agvs.png)
+
+*6 custom flat-platform AGV models in the staging area.*
 
 ---
 
-## System Architecture
+## What it does
 
-```mermaid
-graph TB
-    subgraph Docker["🐳 Docker Container (ROS 2 Humble)"]
-        subgraph ROS2["ROS 2 Workspace"]
-            SimSensors["sim_sensors\n📷 RGB Publisher\n📏 Depth Publisher\n🔄 IMU Publisher"]
-            SyncLogger["sync_logger\n📝 Synchronized\nData Logger"]
-            MLInference["ml_inference\n🧠 Position\nInference Node"]
-        end
+The system has three layers that communicate continuously:
 
-        subgraph MLStack["ML Stack"]
-            Training["train_position_classifier.py\n🏋️ TinyCNN Training"]
-            MLflow["MLflow\n📊 Experiment Tracking\n🗂️ Model Registry"]
-            Models["models/\n💾 best_position_cnn.pt"]
-        end
+**Simulation (GCP VM)** — Gazebo runs the physics simulation with 6 custom AGV robots and a warehouse environment. Each robot is a differential drive platform with odometry. Three pick zones have UR10 manipulator arms as loading stations. A conveyor belt on the south wall is the drop-off point.
 
-        subgraph Tools["Tools & Visualization"]
-            Dashboard["dashboard.py\n📈 Streamlit Dashboard\n:8501"]
-            LiveViz["live_sensor_viz.py\n🎥 Live Predictions\n:8502"]
-            Validator["dataset_validator.py\n✅ Dataset QA"]
-        end
+**Fleet Manager (ROS2 node)** — A Python ROS2 node manages all 6 AGVs. It handles mission assignment, waypoint navigation, battery simulation, and fault injection. Each AGV follows its own lane to avoid collisions. The node broadcasts full fleet telemetry every 2 seconds over `/aria/telemetry`.
 
-        subgraph Data["Data Layer"]
-            Bags["data/bags/\n🎒 Rosbag2 Recordings"]
-            Dataset["data/dataset_balanced/\n🖼️ 1,307 RGB Images\n📄 metadata.parquet"]
-        end
-    end
+**Dashboard + Backend (Mac/local)** — A React frontend connects directly to the ROS2 WebSocket bridge and shows live robot positions, states, and battery levels. A FastAPI backend handles mission dispatch and serves the Claude AI endpoint.
 
-    subgraph Ports["Browser Access"]
-        P1["localhost:8502\n🎯 Live Predictions"]
-        P2["localhost:8501\n📊 Training Metrics"]
-        P3["localhost:5001\n🔬 MLflow UI"]
-    end
+---
 
-    SimSensors -->|"/sim/rgb\n/sim/depth\n/sim/imu"| SyncLogger
-    SimSensors -->|"/sim/rgb"| MLInference
-    SyncLogger -->|".db3 rosbag"| Bags
-    Bags -->|"export_bag_rgb"| Dataset
-    Dataset --> Training
-    Training --> MLflow
-    Training --> Models
-    Models --> MLInference
-    MLInference -->|"/eval/position_pred\n/eval/position_pred_text"| LiveViz
-    MLflow --> Dashboard
-    Dashboard --> P2
-    LiveViz --> P1
-    MLflow --> P3
+## Architecture
+
+```
+Mac (local)
+├── React Dashboard (Vite)       ← connects via WebSocket to rosbridge
+│   └── http://localhost:5173
+└── FastAPI Backend              ← forwards missions to ROS2
+    └── http://localhost:8000
+          │
+          │ WebSocket (port 9090)
+          ▼
+GCP VM (Ubuntu 22.04, e2-standard-4)
+├── rosbridge_server             ← WebSocket bridge to ROS2
+├── ARIA Fleet Manager           ← ROS2 node, manages all 6 AGVs
+│   ├── /aria/telemetry          ← fleet state broadcast
+│   ├── /aria/mission            ← receives dispatch commands
+│   ├── /aria/inject_fault       ← fault simulation
+│   └── /agv_XX/cmd_vel + odom   ← per-robot control + feedback
+└── Gazebo Classic 11            ← physics simulation
+    └── 6x custom AGV models + warehouse world
 ```
 
 ---
 
-## Data Pipeline
+## Key features
 
-```mermaid
-flowchart LR
-    A["🤖 sim_sensors\nROS 2 Node\n10Hz RGB + Depth + IMU"] 
-    -->|"ROS Topics"| B
+**Mission dispatch with throughput calculation** — specify material type, hourly target, and destination dock. The system auto-maps material type to pick zone (auto parts → Zone A, electronics → Zone B, raw material → Zone C) and calculates AGV count based on a 15 units/AGV/hour throughput model.
 
-    B["sync_logger\nSynchronized subscriber\nTimestamp alignment"]
-    -->|"rosbag2 .db3"| C
+**Real-time position sync** — AGV positions on the dashboard map come directly from `/agv_XX/odom` topics published by Gazebo. The SVG warehouse map is coordinate-mapped to match the actual Gazebo world layout.
 
-    C["data/bags/run_01/\nRosbag Recording\n~30 seconds"]
-    -->|"make export"| D
+**Fault injection and AI diagnosis** — faults can be injected on specific AGVs via a ROS2 topic. When a fault appears, the Claude agent explains the fault code, provides repair steps, and assesses fleet impact with full context of current fleet state.
 
-    D["export_bag_rgb_to_dataset.py\nExtract RGB frames\nConvert to PNG"]
-    -->|"1,307 images +\nmetadata.parquet"| E
+**Lane-based collision avoidance** — each AGV is assigned a fixed X-axis lane so dispatched robots travel in parallel without blocking each other.
 
-    E["data/dataset_balanced/\nBalanced Dataset\nLeft / Center / Right"]
-    -->|"make validate"| F
+**Battery simulation** — active AGVs drain at 0.04%/sec. Below 15%, they auto-route to the charging station and stop accepting new missions until fully charged.
 
-    F["dataset_validator.py\nFile integrity check\nClass distribution check"]
-    -->|"✅ Pass"| G
+---
 
-    G["train_position_classifier.py\nTinyCNN Training\n80/20 train/val split"]
-    -->|"metrics + weights"| H
+## Tech stack
 
-    H["MLflow\nExperiment Tracking\nConfusion Matrix"]
-    -->|"promote_best_model.py"| I
+| Component | Technology |
+|---|---|
+| Robot simulation | Gazebo Classic 11 |
+| Robot middleware | ROS2 Humble (Python) |
+| WebSocket bridge | rosbridge_server |
+| Backend API | FastAPI + Python 3.10 |
+| AI agent | Anthropic Claude (claude-sonnet-4) |
+| Frontend | React 18 + Vite |
+| Cloud | GCP — Ubuntu 22.04, e2-standard-4 |
+| VNC | Xvfb + x11vnc |
 
-    I["models/best_position_cnn.pt\n✨ Best Model\nVal Acc = 100%"]
+---
 
-    style A fill:#4a90d9,color:#fff
-    style E fill:#27ae60,color:#fff
-    style I fill:#e67e22,color:#fff
-    style F fill:#16a085,color:#fff
+## ROS2 topics
+
+| Topic | Message type | Purpose |
+|---|---|---|
+| `/aria/telemetry` | `std_msgs/String` | Full fleet JSON, published every 2s |
+| `/aria/mission` | `std_msgs/String` | Mission dispatch from dashboard |
+| `/aria/inject_fault` | `std_msgs/String` | Fault simulation trigger |
+| `/agv_XX/cmd_vel` | `geometry_msgs/Twist` | Velocity commands per robot |
+| `/agv_XX/odom` | `nav_msgs/Odometry` | Real position feedback from Gazebo |
+
+---
+
+## Repository structure
+
 ```
-
-### Auto-labeling Logic
-
-The dataset uses **automatic label generation** — no manual annotation needed. During training, each image is analyzed on-the-fly:
-
-```mermaid
-flowchart TD
-    A["Load RGB Image\n240×320 px"] --> B["Detect Red Pixels\nR > 140 AND G < 120 AND B < 120"]
-    B --> C{">20 red pixels\nfound?"}
-    C -->|"No"| D["Default: CENTER\n(class 1)"]
-    C -->|"Yes"| E["Compute mean X\nof red region"]
-    E --> F{x_mean\nvs image width}
-    F -->|"x < width/3"| G["LEFT\n(class 0)"]
-    F -->|"x > 2×width/3"| H["RIGHT\n(class 2)"]
-    F -->|"middle third"| I["CENTER\n(class 1)"]
-
-    style G fill:#e74c3c,color:#fff
-    style I fill:#27ae60,color:#fff
-    style H fill:#3498db,color:#fff
+aria-fleet-commander/
+├── aria-dashboard/
+│   └── src/App.jsx              # React dashboard — map, KPIs, mission modal, AI chat
+├── aria-backend/
+│   ├── app/main.py              # FastAPI routes + rosbridge mission publisher
+│   └── app/agents/aria_agent.py # Claude AI agent with fault database
+├── aria-ros2/
+│   └── src/aria_fleet/
+│       ├── aria_fleet/
+│       │   └── fleet_manager.py # ROS2 node — navigation, dispatch, fault handling
+│       └── launch/
+│           └── warehouse_sim.launch.py
+├── worlds/
+│   └── aria_warehouse_v2.world  # Gazebo world — zones, conveyor, staging area
+└── docs/
+    └── STARTUP_COMMANDS.sh      # Full startup reference
 ```
 
 ---
 
-## ML Model
+## Setup
 
-### TinyCNN Architecture
+### Prerequisites
 
-```mermaid
-graph LR
-    Input["Input\n3 × 120 × 120\nRGB Image"] 
-    --> Conv1["Conv2d\n3→16 ch\nkernel=3, stride=2\n+ ReLU\n→ 16×60×60"]
-    --> Conv2["Conv2d\n16→32 ch\nkernel=3, stride=2\n+ ReLU\n→ 32×30×30"]
-    --> Pool["AdaptiveMaxPool2d\n→ 32×1×1"]
-    --> Flatten["Flatten\n→ 32"]
-    --> FC["Linear\n32 → 3"]
-    --> Output["Output\nLeft / Center / Right\nSoftmax Probabilities"]
+- Mac with Node.js 18+, Python 3.10+
+- GCP VM running Ubuntu 22.04 (e2-standard-4)
+- ROS2 Humble + Gazebo Classic 11 on the VM
+- Anthropic API key
 
-    style Input fill:#9b59b6,color:#fff
-    style Output fill:#e67e22,color:#fff
-```
-
-### Training Results
-
-| Metric | Value |
-|--------|-------|
-| Final Train Accuracy | **100%** |
-| Final Val Accuracy | **100%** |
-| Final Val Loss | **1.56e-05** |
-| Epochs | 5 |
-| Learning Rate | 0.001 |
-| Batch Size | 16 |
-| Dataset Size | 1,307 images |
-| Train / Val Split | 1,045 / 262 |
-
-### MLflow Experiment Tracking
-
-All training runs are tracked with MLflow, including hyperparameters, metrics per epoch, and model artifacts. The `promote_best_model.py` script automatically selects the best run and saves it to `models/best_position_cnn.pt`.
-
-```mermaid
-graph LR
-    Run1["MLflow Run 1\nval_acc=1.0\ntrain_loss=3.4e-05"] --> Compare
-    Run2["MLflow Run 2\nval_acc=1.0\ntrain_loss=2.6e-05"] --> Compare
-    Run3["MLflow Run 3\nval_acc=1.0\ntrain_loss=3.0e-05"] --> Compare
-    Run4["MLflow Run 4 ✓\nval_acc=1.0\ntrain_loss=2.2e-05"] --> Compare
-
-    Compare["promote_best_model.py\nSelect best by val_loss"] --> Best["models/best_position_cnn.pt\n🏆 Deployed Model"]
-
-    style Run4 fill:#27ae60,color:#fff
-    style Best fill:#e67e22,color:#fff
-```
-
----
-
-## ROS 2 Node Graph
-
-```mermaid
-graph TD
-    subgraph sim_sensors["Package: sim_sensors"]
-        RGB["rgb_publisher\nnode"]
-        Depth["depth_publisher\nnode"]
-        IMU["simple_imu_publisher\nnode"]
-        Saver["image_saver\nnode"]
-    end
-
-    subgraph sync_logger["Package: sync_logger"]
-        Sync["sync_logger_node\nSynchronized multi-topic\nsubscriber + rosbag writer"]
-    end
-
-    subgraph ml_inference["Package: ml_inference"]
-        Infer["position_inference_node\nLoads TinyCNN model\nRuns at 10Hz"]
-    end
-
-    RGB -->|"/sim/rgb\nsensor_msgs/Image"| Sync
-    RGB -->|"/sim/rgb\nsensor_msgs/Image"| Infer
-    RGB -->|"/sim/rgb\nsensor_msgs/Image"| Saver
-    Depth -->|"/sim/depth\nsensor_msgs/Image"| Sync
-    IMU -->|"/sim/imu\nsensor_msgs/Imu"| Sync
-
-    Sync -->|"rosbag2 .db3"| BagFile[("data/bags/\nrun_01_0.db3")]
-
-    Infer -->|"/eval/position_pred\nstd_msgs/Int32"| Dashboard["📊 Streamlit\nDashboards"]
-    Infer -->|"/eval/position_pred_text\nstd_msgs/String"| Dashboard
-
-    style sim_sensors fill:#1a5276,color:#fff
-    style sync_logger fill:#1e8449,color:#fff
-    style ml_inference fill:#7d6608,color:#fff
-```
-
----
-
-## Project Structure
-
-```
-robotics-ml-pipeline/
-├── 🐳 docker/
-│   ├── Dockerfile              # ROS 2 Humble + Python ML stack
-│   └── docker-compose.yml      # dev + mlflow services
-│
-├── 🤖 ros2_ws/src/
-│   ├── sim_sensors/            # Simulated sensor publishers
-│   │   ├── rgb_pub.py          # RGB camera (240×320, 10Hz)
-│   │   ├── depth_pub.py        # Depth map publisher
-│   │   ├── simple_pub.py       # IMU publisher
-│   │   └── image_saver.py      # Save frames to disk
-│   ├── ml_inference/
-│   │   └── position_inference_node.py  # Live CNN inference
-│   └── sync_logger/
-│       └── sync_logger_node.py # Synchronized rosbag writer
-│
-├── 🧠 ml/
-│   ├── train_position_classifier.py    # TinyCNN training + MLflow
-│   ├── eval_confusion_matrix.py        # Standalone evaluation
-│   └── artifacts/
-│       ├── position_cnn.pt             # Latest trained weights
-│       ├── confusion_matrix.txt        # Evaluation results
-│       └── training_info.json          # Run metadata
-│
-├── 🛠️ tools/
-│   ├── export_bag_rgb_to_dataset.py    # Rosbag → PNG dataset
-│   ├── dataset_validator.py            # Dataset integrity checks
-│   ├── dataset_utils.py                # Shared utilities
-│   ├── promote_best_model.py           # MLflow → model registry
-│   ├── dashboard.py                    # Streamlit metrics dashboard
-│   └── live_sensor_viz.py             # Streamlit live inference view
-│
-├── 📦 models/
-│   ├── best_position_cnn.pt            # ✨ Active production model
-│   └── registry.json                   # Model promotion history
-│
-├── 📁 data/
-│   ├── bags/                           # Rosbag2 recordings (.db3)
-│   └── dataset_balanced/               # Exported training dataset
-│       ├── images/                     # 1,307 RGB PNGs (240×320)
-│       ├── metadata.parquet            # Image metadata + timestamps
-│       └── dataset_info.json           # Dataset provenance
-│
-├── 📜 scripts/
-│   └── record_rosbag.sh               # Rosbag recording script
-│
-└── Makefile                            # Full pipeline orchestration
-```
-
----
-
-## Quick Start
-
-### Fastest Way: One Command
+### 1. Clone
 
 ```bash
-docker compose -f docker/docker-compose.yml up -d dev mlflow
-docker compose -f docker/docker-compose.yml exec dev bash
-cd /workspace && make full-pipeline
+git clone https://github.com/yashsavle/aria-fleet-commander.git
+cd aria-fleet-commander
 ```
 
-Then open: **http://localhost:8502** to see live predictions!
-
-`make full-pipeline` does everything automatically:
-1. Builds ROS 2 packages
-2. Starts sensor simulation
-3. Records 30 seconds of rosbag data
-4. Exports to a dataset
-5. Trains the model (5 epochs)
-6. Promotes the best model
-
-### View Results
-
-| URL | What you see |
-|-----|-------------|
-| http://localhost:8502 | Live predictions + video feed |
-| http://localhost:8501 | Training metrics dashboard |
-| http://localhost:5001 | MLflow experiment details |
-
-### Reset Everything
+### 2. Dashboard
 
 ```bash
-# Kill all processes
-docker compose -f docker/docker-compose.yml exec dev bash -c "pkill -9 -f 'ros2|streamlit|python3' || true"
+cd aria-dashboard
+npm install
+```
 
-# Remove containers
-docker compose -f docker/docker-compose.yml down
+Create `.env`:
+```
+VITE_API_URL=http://localhost:8000
+VITE_WS_URL=ws://YOUR_VM_IP:9090
+```
 
-# Start fresh
-docker compose -f docker/docker-compose.yml up -d dev mlflow
-docker compose -f docker/docker-compose.yml exec dev bash
-cd /workspace && make full-pipeline
+### 3. Backend
+
+```bash
+cd aria-backend
+pip3 install fastapi uvicorn anthropic websockets python-dotenv
+```
+
+Create `.env`:
+```
+ANTHROPIC_API_KEY=your_key_here
+```
+
+### 4. VM — build the ROS2 package
+
+```bash
+gcloud compute ssh your-user@aria-sim --zone your-zone
+
+cd ~/aria_ros2
+colcon build --symlink-install
+source install/setup.bash
+```
+
+### 5. VM — firewall rules
+
+```bash
+gcloud compute firewall-rules create aria-ports \
+  --allow tcp:9090,tcp:5900 \
+  --source-ranges 0.0.0.0/0
 ```
 
 ---
 
-## Step-by-Step Usage
+## Running
 
-```mermaid
-flowchart TD
-    S1["make build\nBuild ROS2 packages with colcon"] 
-    --> S2["make run-publishers\nStart sim_sensors nodes\nin background"]
-    --> S3["make record BAG=data/bags/my_run\nRecord 50+ seconds of\nrosbag2 data"]
-    --> S4["make export BAG=data/bags/my_run\n         OUT=data/my_dataset\nExtract RGB frames → PNG"]
-    --> S5["make validate DATASET=data/my_dataset\nCheck file integrity\n& class distribution"]
-    --> S6["make train DATASET=data/my_dataset\n      EPOCHS=20 LR=0.001\nTrain TinyCNN + log to MLflow"]
-    --> S7["make promote\nAuto-select best MLflow run\n→ models/best_position_cnn.pt"]
-    --> S8["http://localhost:8502\n🎯 Live inference running!"]
+### VM
 
-    style S1 fill:#2980b9,color:#fff
-    style S8 fill:#27ae60,color:#fff
+```bash
+Xvfb :99 -screen 0 1280x800x24 &
+x11vnc -display :99 -nopw -listen 0.0.0.0 -xkb -forever &
+
+export DISPLAY=:99
+export LIBGL_ALWAYS_SOFTWARE=1
+export GAZEBO_MODEL_PATH=~/aria_agv_model:/opt/ros/humble/share/turtlebot3_gazebo/models
+source /opt/ros/humble/setup.bash
+source ~/aria_ros2/install/setup.bash
+
+gzserver --verbose ~/aria_warehouse_v2.world \
+  -s libgazebo_ros_init.so -s libgazebo_ros_factory.so &
+sleep 15
+gzclient --verbose &
 ```
 
-### Key `make` Targets
-
-| Command | Description |
-|---------|-------------|
-| `make full-pipeline` | Run the complete pipeline end-to-end |
-| `make build` | Build all ROS 2 packages |
-| `make run-publishers` | Start simulated sensor nodes |
-| `make record BAG=<path>` | Record rosbag (50+ seconds recommended) |
-| `make export BAG=<path> OUT=<path>` | Export rosbag to image dataset |
-| `make validate DATASET=<path>` | Validate dataset integrity |
-| `make train DATASET=<path> EPOCHS=<n> LR=<lr>` | Train and log to MLflow |
-| `make promote` | Promote best MLflow run to model registry |
-| `make eval` | Run evaluation and save confusion matrix |
-
----
-
-## Results
-
-### Model Performance
-
-The TinyCNN achieves perfect classification on this simulated dataset after just 5 epochs of training:
-
-```
-Confusion Matrix
-================================================
-Labels: Left (0), Center (1), Right (2)
-
-Predicted → |  Left  | Center |  Right |
-------------|--------|--------|--------|
-Left        |   262  |    0   |    0   |
-Center      |     0  |  262   |    0   |
-Right       |     0  |    0   |  262   |
-
-Precision / Recall / F1: 1.000 across all classes
+In a new SSH tab:
+```bash
+source /opt/ros/humble/setup.bash
+source ~/aria_ros2/install/setup.bash
+ros2 launch aria_fleet warehouse_sim.launch.py
 ```
 
-### Multiple Training Runs (MLflow Registry)
+### Mac
 
-| Run | Val Accuracy | Val Loss | Train Loss |
-|-----|-------------|----------|------------|
-| Run 1 | 100% | 2.85e-05 | 3.41e-05 |
-| Run 2 | 100% | 2.12e-05 | 2.60e-05 |
-| Run 3 | 100% | 2.41e-05 | 2.95e-05 |
-| **Run 4 ✓** | **100%** | **1.56e-05** | **2.17e-05** |
+```bash
+# Terminal 1
+cd aria-backend && python3 -m uvicorn app.main:app --reload --port 8000
 
----
+# Terminal 2
+cd aria-dashboard && npm run dev
+```
 
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| **Robotics Middleware** | ROS 2 Humble |
-| **Deep Learning** | PyTorch (TinyCNN) |
-| **Experiment Tracking** | MLflow |
-| **Data Format** | Rosbag2 (.db3), Parquet, PNG |
-| **Visualization** | Streamlit, Plotly |
-| **Containerization** | Docker + Docker Compose |
-| **Language** | Python 3.10 |
-
-### Requirements
-
-- Docker and Docker Compose
-- 4GB+ RAM recommended
-- macOS / Linux (ARM64 compatible)
+Open `http://localhost:5173` — confirm ROS LIVE is green.
 
 ---
 
-## Extending This Project
+## Usage
 
-This serves as a template for robotics ML pipelines. Key areas for extension:
+**Dispatch a mission** — click + MISSION, enter material type and hourly target. The system picks the right zone and calculates robot count automatically.
 
-- **More sensor modalities**: Add LiDAR, GPS, thermal camera topics
-- **Different architectures**: ResNet, MobileNet, Vision Transformers
-- **Real hardware**: Swap `sim_sensors` for a real camera ROS 2 driver
-- **Simulation environments**: Gazebo, Isaac Sim, Webots
-- **More complex tasks**: Object detection, depth estimation, navigation
-- **CI/CD**: Automated retraining on new rosbag data
+**Monitor fleet** — Fleet Map tab shows live positions. Click any robot to see its state, zone, battery, and intended path.
+
+**Inject a fault** — for testing:
+```bash
+ros2 topic pub --once /aria/inject_fault std_msgs/msg/String '{"data": "agv_01,agv_03"}'
+```
+
+**Ask the AI** — ARIA AI tab, ask about fault codes, maintenance, or throughput optimization.
 
 ---
 
-## License
+## Notes
 
-MIT License — feel free to use this as a starting point for your robotics ML projects.
+- VM IP changes on restart — update `VITE_WS_URL` in `.env` and `ros_ws_url` in `main.py`
+- Stop the VM between sessions: `gcloud compute instances stop aria-sim`
+- `colcon build --symlink-install` means edits to `fleet_manager.py` apply without rebuilding
+
+---
+
+## Author
+
+Yash Savle — built this to get hands-on with the ROS2 + simulation + AI stack, and to understand how real warehouse management systems bridge physical robots and software interfaces.
