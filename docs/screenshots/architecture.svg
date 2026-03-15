@@ -1,0 +1,167 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" viewBox="0 0 900 820" font-family="ui-monospace,SFMono-Regular,SF Mono,Menlo,Consolas,Liberation Mono,monospace">
+
+  <!-- Background -->
+  <rect width="900" height="820" fill="#0d1117" rx="8"/>
+
+  <!-- ── LAYER 1: Browser / Frontend ── -->
+  <rect x="20" y="16" width="860" height="136" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+  <text x="36" y="40" font-size="12" font-weight="600" fill="#58a6ff">Browser — React dashboard</text>
+  <text x="36" y="56" font-size="11" fill="#8b949e">localhost:5173 · Vite + React 18 · WebSocket client</text>
+
+  <!-- Frontend component boxes -->
+  <!-- Fleet map -->
+  <rect x="36" y="66" width="186" height="70" rx="6" fill="#1c2128" stroke="#388bfd" stroke-width="1"/>
+  <text x="129" y="88" font-size="11" font-weight="600" fill="#79c0ff" text-anchor="middle">Fleet map SVG</text>
+  <text x="129" y="103" font-size="10" fill="#8b949e" text-anchor="middle">Renders live positions</text>
+  <text x="129" y="118" font-size="10" fill="#8b949e" text-anchor="middle">WS subscribe telemetry</text>
+
+  <!-- Mission modal -->
+  <rect x="238" y="66" width="186" height="70" rx="6" fill="#1c2128" stroke="#388bfd" stroke-width="1"/>
+  <text x="331" y="88" font-size="11" font-weight="600" fill="#79c0ff" text-anchor="middle">Mission modal</text>
+  <text x="331" y="103" font-size="10" fill="#8b949e" text-anchor="middle">Dispatches missions</text>
+  <text x="331" y="118" font-size="10" fill="#8b949e" text-anchor="middle">POST /dispatch-mission</text>
+
+  <!-- ARIA AI chat -->
+  <rect x="440" y="66" width="186" height="70" rx="6" fill="#1c2128" stroke="#388bfd" stroke-width="1"/>
+  <text x="533" y="88" font-size="11" font-weight="600" fill="#79c0ff" text-anchor="middle">ARIA AI chat</text>
+  <text x="533" y="103" font-size="10" fill="#8b949e" text-anchor="middle">Fleet AI assistant</text>
+  <text x="533" y="118" font-size="10" fill="#8b949e" text-anchor="middle">POST /ask-aria</text>
+
+  <!-- Telemetry hook -->
+  <rect x="642" y="66" width="218" height="70" rx="6" fill="#1c2128" stroke="#388bfd" stroke-width="1"/>
+  <text x="751" y="88" font-size="11" font-weight="600" fill="#79c0ff" text-anchor="middle">Telemetry hook</text>
+  <text x="751" y="103" font-size="10" fill="#8b949e" text-anchor="middle">Persistent WS connection</text>
+  <text x="751" y="118" font-size="10" fill="#8b949e" text-anchor="middle">ws://VM_IP:9090</text>
+
+  <!-- ── Arrows: Frontend → Backend (HTTP) ── -->
+  <!-- Mission modal → FastAPI -->
+  <line x1="331" y1="152" x2="331" y2="200" stroke="#388bfd" stroke-width="1.2" marker-end="url(#arr-blue)"/>
+  <text x="337" y="182" font-size="10" fill="#388bfd">HTTP POST</text>
+
+  <!-- ARIA AI → FastAPI -->
+  <line x1="533" y1="152" x2="533" y2="200" stroke="#388bfd" stroke-width="1.2" marker-end="url(#arr-blue)"/>
+  <text x="539" y="182" font-size="10" fill="#388bfd">HTTP POST</text>
+
+  <!-- Telemetry ↔ rosbridge WS (goes down to GCP) -->
+  <line x1="751" y1="152" x2="751" y2="200" stroke="#3fb950" stroke-width="1.2" marker-end="url(#arr-green)"/>
+  <text x="757" y="182" font-size="10" fill="#3fb950">WS subscribe</text>
+
+  <!-- ── LAYER 2: FastAPI backend ── -->
+  <rect x="20" y="200" width="560" height="130" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+  <text x="36" y="224" font-size="12" font-weight="600" fill="#58a6ff">FastAPI backend</text>
+  <text x="36" y="240" font-size="11" fill="#8b949e">localhost:8000 · Python 3.10 · uvicorn</text>
+
+  <!-- /dispatch-mission -->
+  <rect x="36" y="252" width="230" height="62" rx="6" fill="#1c2128" stroke="#56d364" stroke-width="1"/>
+  <text x="151" y="272" font-size="11" font-weight="600" fill="#56d364" text-anchor="middle">POST /dispatch-mission</text>
+  <text x="151" y="288" font-size="10" fill="#8b949e" text-anchor="middle">Calculates AGV count</text>
+  <text x="151" y="303" font-size="10" fill="#8b949e" text-anchor="middle">Publishes to /aria/mission</text>
+
+  <!-- /ask-aria -->
+  <rect x="294" y="252" width="230" height="62" rx="6" fill="#1c2128" stroke="#56d364" stroke-width="1"/>
+  <text x="409" y="272" font-size="11" font-weight="600" fill="#56d364" text-anchor="middle">POST /ask-aria</text>
+  <text x="409" y="288" font-size="10" fill="#8b949e" text-anchor="middle">Injects fleet context</text>
+  <text x="409" y="303" font-size="10" fill="#8b949e" text-anchor="middle">Calls Claude API</text>
+
+  <!-- FastAPI → Claude (external HTTPS) -->
+  <line x1="580" y1="283" x2="628" y2="283" stroke="#bc8cff" stroke-width="1.2" marker-end="url(#arr-purple)"/>
+  <text x="583" y="276" font-size="10" fill="#bc8cff">HTTPS</text>
+
+  <!-- ── Claude API box ── -->
+  <rect x="630" y="200" width="250" height="130" rx="8" fill="#161b22" stroke="#7c3aed" stroke-width="1"/>
+  <text x="755" y="226" font-size="12" font-weight="600" fill="#bc8cff" text-anchor="middle">Anthropic Claude</text>
+  <text x="755" y="244" font-size="11" fill="#8b949e" text-anchor="middle">claude-sonnet-4</text>
+  <text x="755" y="264" font-size="10" fill="#8b949e" text-anchor="middle">Fault diagnosis</text>
+  <text x="755" y="280" font-size="10" fill="#8b949e" text-anchor="middle">Repair procedures</text>
+  <text x="755" y="296" font-size="10" fill="#8b949e" text-anchor="middle">Fleet optimization</text>
+
+  <!-- FastAPI /dispatch → rosbridge publish -->
+  <line x1="151" y1="314" x2="151" y2="372" stroke="#3fb950" stroke-width="1.2" marker-end="url(#arr-green)"/>
+  <text x="157" y="350" font-size="10" fill="#3fb950">WS publish</text>
+  <text x="157" y="363" font-size="10" fill="#3fb950">/aria/mission</text>
+
+  <!-- ── LAYER 3: GCP VM ── -->
+  <rect x="20" y="372" width="860" height="424" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+  <text x="36" y="396" font-size="12" font-weight="600" fill="#58a6ff">GCP VM — Ubuntu 22.04 · e2-standard-4</text>
+  <text x="36" y="412" font-size="11" fill="#8b949e">ROS2 Humble · Gazebo Classic 11 · Xvfb + x11vnc · rosbridge :9090</text>
+
+  <!-- rosbridge -->
+  <rect x="36" y="422" width="828" height="64" rx="6" fill="#1c2128" stroke="#56d364" stroke-width="1"/>
+  <text x="450" y="448" font-size="12" font-weight="600" fill="#56d364" text-anchor="middle">rosbridge WebSocket server — port 9090</text>
+  <text x="450" y="466" font-size="10" fill="#8b949e" text-anchor="middle">Bridges ROS2 topic graph ↔ WebSocket clients · JSON serialisation · auto-reconnect</text>
+
+  <!-- rosbridge ↔ fleet manager arrows -->
+  <line x1="250" y1="486" x2="250" y2="530" stroke="#3fb950" stroke-width="1.2" marker-end="url(#arr-green)"/>
+  <text x="256" y="514" font-size="10" fill="#3fb950">/aria/mission</text>
+
+  <line x1="650" y1="530" x2="650" y2="486" stroke="#3fb950" stroke-width="1.2" marker-end="url(#arr-green)"/>
+  <text x="656" y="514" font-size="10" fill="#3fb950">/aria/telemetry</text>
+
+  <!-- rosbridge ↔ frontend telemetry (dashed back up) -->
+  <line x1="828" y1="422" x2="751" y2="152" stroke="#3fb950" stroke-width="1" stroke-dasharray="5,3" marker-end="url(#arr-green)"/>
+
+  <!-- Fleet Manager -->
+  <rect x="36" y="530" width="828" height="80" rx="6" fill="#1c2128" stroke="#f78166" stroke-width="1"/>
+  <text x="450" y="556" font-size="12" font-weight="600" fill="#f78166" text-anchor="middle">ARIA fleet manager — ROS2 Python node</text>
+  <text x="450" y="574" font-size="10" fill="#8b949e" text-anchor="middle">Mission assignment · waypoint navigation · battery simulation · fault injection · staggered AGV dispatch</text>
+  <text x="450" y="592" font-size="10" fill="#8b949e" text-anchor="middle">Publishes: /aria/telemetry · /agv_XX/cmd_vel   Subscribes: /aria/mission · /aria/inject_fault · /agv_XX/odom</text>
+
+  <!-- Fleet manager → Gazebo cmd_vel -->
+  <line x1="280" y1="610" x2="280" y2="658" stroke="#e3b341" stroke-width="1.2" marker-end="url(#arr-yellow)"/>
+  <text x="286" y="640" font-size="10" fill="#e3b341">/agv_XX/cmd_vel</text>
+
+  <!-- Gazebo → Fleet manager odom -->
+  <line x1="500" y1="658" x2="500" y2="610" stroke="#e3b341" stroke-width="1.2" marker-end="url(#arr-yellow)"/>
+  <text x="506" y="640" font-size="10" fill="#e3b341">/agv_XX/odom</text>
+
+  <!-- Gazebo Sim -->
+  <rect x="36" y="658" width="828" height="114" rx="6" fill="#1c2128" stroke="#e3b341" stroke-width="1"/>
+  <text x="450" y="682" font-size="12" font-weight="600" fill="#e3b341" text-anchor="middle">Gazebo Classic 11 simulation — aria_warehouse_v2.world</text>
+  <text x="450" y="698" font-size="10" fill="#8b949e" text-anchor="middle">ODE physics engine · software rendering (LIBGL_ALWAYS_SOFTWARE) · VNC via Xvfb + x11vnc</text>
+
+  <!-- Sub-boxes in Gazebo -->
+  <rect x="56" y="710" width="220" height="48" rx="5" fill="#0d1117" stroke="#484f58" stroke-width="1"/>
+  <text x="166" y="730" font-size="11" font-weight="600" fill="#cdd9e5" text-anchor="middle">6× custom AGV models</text>
+  <text x="166" y="748" font-size="10" fill="#8b949e" text-anchor="middle">SDF · diff drive plugin · odom pub</text>
+
+  <rect x="296" y="710" width="220" height="48" rx="5" fill="#0d1117" stroke="#484f58" stroke-width="1"/>
+  <text x="406" y="730" font-size="11" font-weight="600" fill="#cdd9e5" text-anchor="middle">3× UR10 manipulators</text>
+  <text x="406" y="748" font-size="10" fill="#8b949e" text-anchor="middle">URDF · static pick stations</text>
+
+  <rect x="536" y="710" width="308" height="48" rx="5" fill="#0d1117" stroke="#484f58" stroke-width="1"/>
+  <text x="690" y="730" font-size="11" font-weight="600" fill="#cdd9e5" text-anchor="middle">Warehouse world</text>
+  <text x="690" y="748" font-size="10" fill="#8b949e" text-anchor="middle">Zone A/B/C · conveyor belt · staging area</text>
+
+  <!-- ── Legend ── -->
+  <line x1="36" y1="796" x2="66" y2="796" stroke="#388bfd" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+  <text x="72" y="800" font-size="10" fill="#8b949e">HTTP REST</text>
+
+  <line x1="166" y1="796" x2="196" y2="796" stroke="#3fb950" stroke-width="1.5" marker-end="url(#arr-green)"/>
+  <text x="202" y="800" font-size="10" fill="#8b949e">WebSocket live</text>
+
+  <line x1="316" y1="796" x2="346" y2="796" stroke="#e3b341" stroke-width="1.5" marker-end="url(#arr-yellow)"/>
+  <text x="352" y="800" font-size="10" fill="#8b949e">ROS2 topic</text>
+
+  <line x1="456" y1="796" x2="486" y2="796" stroke="#bc8cff" stroke-width="1.5" marker-end="url(#arr-purple)"/>
+  <text x="492" y="800" font-size="10" fill="#8b949e">External HTTPS</text>
+
+  <line x1="626" y1="796" x2="656" y2="796" stroke="#3fb950" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr-green)"/>
+  <text x="662" y="800" font-size="10" fill="#8b949e">WS telemetry stream</text>
+
+  <!-- Arrow markers -->
+  <defs>
+    <marker id="arr-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#388bfd" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arr-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#3fb950" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arr-yellow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#e3b341" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arr-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#bc8cff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+</svg>

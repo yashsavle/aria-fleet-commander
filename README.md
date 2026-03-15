@@ -14,6 +14,22 @@ A warehouse AGV fleet management system I built to explore how ROS2, simulation,
 
 ---
 
+## Architecture
+
+<p align="center">
+<img src="docs/screenshots/architecture.svg" alt="ARIA System Architecture" width="100%"/>
+</p>
+
+The system has three layers that communicate continuously:
+
+**Browser / React dashboard** — four components handle different concerns: the SVG fleet map subscribes to live telemetry via WebSocket, the mission modal sends HTTP POST requests to the backend, the ARIA AI chat sends questions to the `/ask-aria` endpoint, and the telemetry hook maintains the persistent WebSocket connection to rosbridge.
+
+**FastAPI backend** — two endpoints. `/dispatch-mission` receives the mission payload, calculates AGV count from the hourly target, and publishes to `/aria/mission` via rosbridge WebSocket. `/ask-aria` proxies the question with full fleet context to the Claude API and returns the response.
+
+**GCP VM** — rosbridge sits at the center, bridging all WebSocket clients to the ROS2 topic graph. The fleet manager node subscribes to `/aria/mission`, dispatches AGVs with staggered starts, and publishes `/aria/telemetry` every 2 seconds. Gazebo runs the physics simulation — AGV odometry flows back up through the fleet manager to the dashboard in real time.
+
+---
+
 ## Demo
 
 ![ARIA Dashboard](docs/screenshots/dashboard.png)
@@ -31,42 +47,6 @@ A warehouse AGV fleet management system I built to explore how ROS2, simulation,
 ![AGV Staging](docs/screenshots/gazebo_agvs.png)
 
 *6 custom flat-platform AGV models in the staging area.*
-
----
-
-## What it does
-
-The system has three layers that communicate continuously:
-
-**Simulation (GCP VM)** — Gazebo runs the physics simulation with 6 custom AGV robots and a warehouse environment. Each robot is a differential drive platform with odometry. Three pick zones have UR10 manipulator arms as loading stations. A conveyor belt on the south wall is the drop-off point.
-
-**Fleet Manager (ROS2 node)** — A Python ROS2 node manages all 6 AGVs. It handles mission assignment, waypoint navigation, battery simulation, and fault injection. Each AGV follows its own lane to avoid collisions. The node broadcasts full fleet telemetry every 2 seconds over `/aria/telemetry`.
-
-**Dashboard + Backend (Mac/local)** — A React frontend connects directly to the ROS2 WebSocket bridge and shows live robot positions, states, and battery levels. A FastAPI backend handles mission dispatch and serves the Claude AI endpoint.
-
----
-
-## Architecture
-
-```
-Mac (local)
-├── React Dashboard (Vite)       ← connects via WebSocket to rosbridge
-│   └── http://localhost:5173
-└── FastAPI Backend              ← forwards missions to ROS2
-    └── http://localhost:8000
-          │
-          │ WebSocket (port 9090)
-          ▼
-GCP VM (Ubuntu 22.04, e2-standard-4)
-├── rosbridge_server             ← WebSocket bridge to ROS2
-├── ARIA Fleet Manager           ← ROS2 node, manages all 6 AGVs
-│   ├── /aria/telemetry          ← fleet state broadcast
-│   ├── /aria/mission            ← receives dispatch commands
-│   ├── /aria/inject_fault       ← fault simulation
-│   └── /agv_XX/cmd_vel + odom   ← per-robot control + feedback
-└── Gazebo Classic 11            ← physics simulation
-    └── 6x custom AGV models + warehouse world
-```
 
 ---
 
