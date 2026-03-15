@@ -262,6 +262,42 @@ ros2 topic pub --once /aria/inject_fault std_msgs/msg/String '{"data": "agv_01,a
 
 ---
 
+## What's next
+
+There's a lot of room to grow this into a more complete warehouse management system. Some directions I'm thinking about:
+
+**Navigation and path planning** — right now AGVs follow fixed waypoints per lane. A proper implementation would use Nav2 with dynamic global and local planners, so robots can replan around obstacles in real time. Adding a path planning management panel to the dashboard would let operators visualize and override routes manually.
+
+**Manipulator robot management** — the UR10 arms are currently static. Integrating MoveIt2 would enable actual pick-and-place trajectories. The dashboard could show arm state, gripper status, and cycle times per zone, with the ability to pause or reassign a manipulator remotely.
+
+**Over-the-air updates** — a mechanism to push fleet manager configuration, waypoint maps, or even firmware updates to the AGV fleet without physically accessing each robot. Could be built on top of a ROS2 parameter server or a dedicated update service.
+
+**Fleet scheduling and optimization** — instead of simple throughput-based dispatch, implement a proper scheduler that accounts for AGV battery levels, current positions, zone queue depth, and dock availability. An LLM-assisted optimizer could suggest shift configurations based on historical throughput data.
+
+**Traffic management** — a centralized traffic controller that assigns right-of-way at intersections, manages convoy spacing, and prevents deadlocks when multiple AGVs need to cross the same point.
+
+**Digital twin sync** — keep the Gazebo simulation synchronized with a real deployment, so operators can test mission plans in simulation before pushing to physical robots.
+
+**Multi-warehouse support** — extend the architecture to manage fleets across multiple warehouse locations from a single dashboard, with per-site telemetry aggregation and cross-site analytics.
+
+**Maintenance scheduling** — track AGV runtime hours, motor cycles, and battery charge counts. Surface predictive maintenance alerts before failures occur, integrated with the existing fault management system.
+
+---
+
 ## Author
 
-Yash Savle — built this to get hands-on with the ROS2 + simulation + AI stack, and to understand how real warehouse management systems bridge physical robots and software interfaces.
+Yash Savle
+
+---
+
+## License
+
+MIT License
+
+Copyright (c) 2026 Yash Savle
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
